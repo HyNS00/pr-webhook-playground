@@ -1,0 +1,30 @@
+name: PR Logger
+
+on:
+  pull_request:
+    types: [opened, edited, closed, synchronize, reopened]
+
+jobs:
+  log-pr-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log Full PR Event Data (JSON)
+        run: |
+          echo "=== Full PR Event Data (JSON) ==="
+          echo '${{ toJSON(github.event) }}'
+
+      - name: Log PR Summary
+        run: |
+          echo "=== PR Summary ==="
+          echo "Title: ${{ github.event.pull_request.title }}"
+          echo "Author: ${{ github.event.pull_request.user.login }}"
+          echo "Additions: ${{ github.event.pull_request.additions }}"
+          echo "Deletions: ${{ github.event.pull_request.deletions }}"
+          echo "Changed Files: ${{ github.event.pull_request.changed_files }}"
+          echo "State: ${{ github.event.pull_request.state }}"
+          echo "Base Branch: ${{ github.event.pull_request.base.ref }}"
+          echo "Head Branch: ${{ github.event.pull_request.head.ref }}"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "PR URL: ${{ github.event.pull_request.html_url }}"
+          echo "Created At: ${{ github.event.pull_request.created_at }}"
+          echo "Updated At: ${{ github.event.pull_request.updated_at }}"
