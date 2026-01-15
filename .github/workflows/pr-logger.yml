@@ -2,49 +2,72 @@ name: PR Logger
 
 on:
   pull_request:
-    types: [opened, edited, closed, synchronize, reopened]
+    types:
+      - opened              # PR 생성
+      - edited              # PR 제목/본문 수정
+      - closed              # PR 종료 (merge/close)
+      - synchronize         # 새 커밋 push
+      - reopened            # PR 재오픈
+      - ready_for_review    # draft → open
+      - converted_to_draft  # open → draft
+      - review_requested    # 리뷰어 지정
+      - review_request_removed  # 리뷰어 해제
+
+  pull_request_review:
+    types: [submitted]      # approve, request_changes, comment
 
 jobs:
   send-pr-data:
     runs-on: ubuntu-latest
     steps:
-      - name: Send PR Event Data
+      # 1. 모든 이벤트: 기본 이벤트 데이터 전송
+      - name: Send Event Data
         run: |
           curl -X POST \
             -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: pull_request" \
+            -H "X-GitHub-Event: ${{ github.event_name }}" \
+            -H "X-GitHub-Action: ${{ github.event.action }}" \
             -d '${{ toJSON(github.event) }}' \
             https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
 
+      # 2. PR 이벤트일 때만: 커밋 목록 전송
       - name: Fetch and Send Commits
+        if: github.event_name == 'pull_request'
         run: |
           COMMITS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "${{ github.event.pull_request.commits_url }}")
-          
+
           curl -X POST \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: pull_request_commits" \
+            -H "X-PR-Number: ${{ github.event.pull_request.number }}" \
             -d "$COMMITS" \
             https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
 
-      - name: Fetch and Send Comments
-        run: |
-          COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ github.event.pull_request.comments_url }}")
-          
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: pull_request_comments" \
-            -d "$COMMENTS" \
-            https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
-
+      # 3. 리뷰 제출 시: 모든 리뷰 코멘트 수집
       - name: Fetch and Send Review Comments
+        if: github.event_name == 'pull_request_review'
         run: |
           REVIEW_COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "${{ github.event.pull_request.review_comments_url }}")
-          
+
           curl -X POST \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: pull_request_review_comments" \
+            -H "X-PR-Number: ${{ github.event.pull_request.number }}" \
             -d "$REVIEW_COMMENTS" \
+            https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
+
+      # 4. PR 종료 시: 일반 코멘트 수집 (대화 탭)
+      - name: Fetch and Send Comments on Close
+        if: github.event_name == 'pull_request' && github.event.action == 'closed'
+        run: |
+          COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ github.event.pull_request.comments_url }}")
+
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: pull_request_comments" \
+            -H "X-PR-Number: ${{ github.event.pull_request.number }}" \
+            -d "$COMMENTS" \
             https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github

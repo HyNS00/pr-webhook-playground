@@ -9,10 +9,14 @@ import org.springframework.web.bind.annotation.*;
 public class GitHubWebhookController {
     @PostMapping("/github")
     public String handleWebhook(
-            @RequestHeader("X-GitHub-Event") String eventType,
+            @RequestHeader(value = "X-GitHub-Event", required = false) String eventType,
+            @RequestHeader(value = "X-GitHub-Action", required = false) String action,
+            @RequestHeader(value = "X-PR-Number", required = false) String prNumber,
             @RequestBody String payload
     ) {
-        log.info("=== GitHub Event: {} ===", eventType);
+        log.info("========================================");
+        log.info("Event: {} | Action: {} | PR: {}", eventType, action, prNumber);
+        log.info("========================================");
         log.info("Payload: {}", payload);
 
         return "OK";
