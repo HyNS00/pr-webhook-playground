@@ -8,10 +8,43 @@ jobs:
   send-pr-data:
     runs-on: ubuntu-latest
     steps:
-      - name: Send PR Data to Server
+      - name: Send PR Event Data
         run: |
           curl -X POST \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: pull_request" \
             -d '${{ toJSON(github.event) }}' \
+            https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
+
+      - name: Fetch and Send Commits
+        run: |
+          COMMITS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ github.event.pull_request.commits_url }}")
+          
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: pull_request_commits" \
+            -d "$COMMITS" \
+            https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
+
+      - name: Fetch and Send Comments
+        run: |
+          COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ github.event.pull_request.comments_url }}")
+          
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: pull_request_comments" \
+            -d "$COMMENTS" \
+            https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
+
+      - name: Fetch and Send Review Comments
+        run: |
+          REVIEW_COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ github.event.pull_request.review_comments_url }}")
+          
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: pull_request_review_comments" \
+            -d "$REVIEW_COMMENTS" \
             https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
