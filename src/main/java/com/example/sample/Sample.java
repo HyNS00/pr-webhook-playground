@@ -18,6 +18,6 @@ public class Sample {
     }
 
     private void helloWord() {
-        String tmp = "hello world";
+        String helloWorld = "hello world";
     }
 }
