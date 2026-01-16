@@ -16,4 +16,8 @@ public class Sample {
     public String getSample2() {
         return sample2;
     }
+
+    private void helloWord() {
+        String helloWorld = "hello world";
+    }
 }
