@@ -1,0 +1,12 @@
+name: review-submitted.yml
+on:
+  pull_request_review:
+    types: [ submitted ]
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "=== REVIEW SUBMITTED ==="
+          echo "Review ID: ${{ github.event.review.id }}"
+          echo "State: ${{ github.event.review.state }}"

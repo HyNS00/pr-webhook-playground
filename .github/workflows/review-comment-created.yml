@@ -1,0 +1,13 @@
+name: review-comment-created.yml
+on:
+  pull_request_review_comment:
+    types: [created]
+
+  jobs:
+    log:
+      runs-on: ubuntu-latest
+      steps:
+        - run: |
+            echo "=== COMMENT CREATED ==="
+            echo "Comment ID: ${{ github.event.comment.id }}"
+            echo "In Reply To: ${{ github.event.comment.in_reply_to_id }}"
