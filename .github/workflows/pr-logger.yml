@@ -1,185 +1,185 @@
-name: PR Logger
-
-on:
-  pull_request:
-    types:
-      - opened
-      - edited
-      - closed
-      - synchronize
-      - reopened
-      - ready_for_review
-      - converted_to_draft
-      - review_requested
-      - review_request_removed
-
-  pull_request_review:
-    types: [submitted]
-
-env:
-  WEBHOOK_URL: https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
-
-jobs:
-  send-pr-data:
-    runs-on: ubuntu-latest
-    steps:
-      # ============================================
-      # 1. PR 이벤트: 핵심 필드만 추출해서 전송
-      # ============================================
-      - name: Send PR Event (Filtered)
-        if: github.event_name == 'pull_request'
-        run: |
-          FILTERED=$(cat << 'EOF' | jq -c '.'
-          {
-            "event_type": "pull_request",
-            "action": "${{ github.event.action }}",
-            "pr_number": ${{ github.event.pull_request.number }},
-            "title": ${{ toJSON(github.event.pull_request.title) }},
-            "state": "${{ github.event.pull_request.state }}",
-            "draft": ${{ github.event.pull_request.draft }},
-            "merged": ${{ github.event.pull_request.merged || false }},
-            "created_at": "${{ github.event.pull_request.created_at }}",
-            "updated_at": "${{ github.event.pull_request.updated_at }}",
-            "closed_at": ${{ toJSON(github.event.pull_request.closed_at) }},
-            "merged_at": ${{ toJSON(github.event.pull_request.merged_at) }},
-            "changed_files": ${{ github.event.pull_request.changed_files || 0 }},
-            "additions": ${{ github.event.pull_request.additions || 0 }},
-            "deletions": ${{ github.event.pull_request.deletions || 0 }},
-            "commits": ${{ github.event.pull_request.commits || 0 }},
-            "review_comments": ${{ github.event.pull_request.review_comments || 0 }},
-            "comments": ${{ github.event.pull_request.comments || 0 }},
-            "author": "${{ github.event.pull_request.user.login }}",
-            "merged_by": ${{ toJSON(github.event.pull_request.merged_by.login) }},
-            "html_url": "${{ github.event.pull_request.html_url }}",
-            "requested_reviewers": ${{ toJSON(github.event.pull_request.requested_reviewers.*.login) }}
-          }
-          EOF
-          )
-          
-          echo "=== PR Event (Filtered) ==="
-          echo "$FILTERED" | jq '.'
-          
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: pull_request" \
-            -H "X-GitHub-Action: ${{ github.event.action }}" \
-            -H "X-PR-Number: ${{ github.event.pull_request.number }}" \
-            -d "$FILTERED" \
-            $WEBHOOK_URL
-
-      # ============================================
-      # 2. Review 이벤트: 리뷰 결과만 추출
-      # ============================================
-      - name: Send Review Event (Filtered)
-        if: github.event_name == 'pull_request_review'
-        run: |
-          FILTERED=$(cat << 'EOF' | jq -c '.'
-          {
-            "event_type": "pull_request_review",
-            "action": "${{ github.event.action }}",
-            "pr_number": ${{ github.event.pull_request.number }},
-            "review_id": ${{ github.event.review.id }},
-            "reviewer": "${{ github.event.review.user.login }}",
-            "review_state": "${{ github.event.review.state }}",
-            "submitted_at": "${{ github.event.review.submitted_at }}",
-            "pr_author": "${{ github.event.pull_request.user.login }}",
-            "pr_title": ${{ toJSON(github.event.pull_request.title) }}
-          }
-          EOF
-          )
-          
-          echo "=== Review Event (Filtered) ==="
-          echo "$FILTERED" | jq '.'
-          
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: pull_request_review" \
-            -H "X-GitHub-Action: ${{ github.event.action }}" \
-            -H "X-PR-Number: ${{ github.event.pull_request.number }}" \
-            -d "$FILTERED" \
-            $WEBHOOK_URL
-
-      # ============================================
-      # 3. Merge 시: 전체 데이터 일괄 수집
-      # ============================================
-      - name: Fetch All Data on Merge
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
-        run: |
-          echo "=== Fetching all PR data on merge ==="
-          
-          # 3-1. Commits 데이터
-          echo "Fetching commits..."
-          COMMITS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ github.event.pull_request.commits_url }}" | jq '[.[] | {
-              sha: .sha,
-              message: .commit.message,
-              author: .commit.author.name,
-              author_login: .author.login,
-              created_at: .commit.author.date
-            }]')
-          
-          # 3-2. Review Comments (코드 리뷰 코멘트)
-          echo "Fetching review comments..."
-          REVIEW_COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ github.event.pull_request.review_comments_url }}" | jq '[.[] | {
-              id: .id,
-              review_id: .pull_request_review_id,
-              author: .user.login,
-              body: .body,
-              path: .path,
-              created_at: .created_at,
-              in_reply_to_id: .in_reply_to_id
-            }]')
-          
-          # 3-3. 일반 Comments (대화 탭)
-          echo "Fetching issue comments..."
-          ISSUE_COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ github.event.pull_request.comments_url }}" | jq '[.[] | {
-              id: .id,
-              author: .user.login,
-              body: .body,
-              created_at: .created_at
-            }]')
-          
-          # 3-4. Reviews 목록 (approve/changes_requested 이력)
-          echo "Fetching reviews..."
-          REVIEWS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ github.event.pull_request.url }}/reviews" | jq '[.[] | {
-              id: .id,
-              reviewer: .user.login,
-              state: .state,
-              submitted_at: .submitted_at
-            }]')
-          
-          # 전체 데이터 조합
-          MERGE_DATA=$(jq -n \
-            --argjson commits "$COMMITS" \
-            --argjson review_comments "$REVIEW_COMMENTS" \
-            --argjson issue_comments "$ISSUE_COMMENTS" \
-            --argjson reviews "$REVIEWS" \
-            '{
-              event_type: "pull_request_merged",
-              pr_number: ${{ github.event.pull_request.number }},
-              title: ${{ toJSON(github.event.pull_request.title) }},
-              author: "${{ github.event.pull_request.user.login }}",
-              merged_by: "${{ github.event.pull_request.merged_by.login }}",
-              created_at: "${{ github.event.pull_request.created_at }}",
-              merged_at: "${{ github.event.pull_request.merged_at }}",
-              changed_files: ${{ github.event.pull_request.changed_files }},
-              additions: ${{ github.event.pull_request.additions }},
-              deletions: ${{ github.event.pull_request.deletions }},
-              commits: $commits,
-              reviews: $reviews,
-              review_comments: $review_comments,
-              issue_comments: $issue_comments
-            }')
-          
-          echo "=== Merge Data ==="
-          echo "$MERGE_DATA" | jq '.'
-          
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: pull_request_merged" \
-            -H "X-PR-Number: ${{ github.event.pull_request.number }}" \
-            -d "$MERGE_DATA" \
-            $WEBHOOK_URL
+#name: PR Logger
+#
+#on:
+#  pull_request:
+#    types:
+#      - opened
+#      - edited
+#      - closed
+#      - synchronize
+#      - reopened
+#      - ready_for_review
+#      - converted_to_draft
+#      - review_requested
+#      - review_request_removed
+#
+#  pull_request_review:
+#    types: [submitted]
+#
+#env:
+#  WEBHOOK_URL: https://abiotic-kenia-tracelessly.ngrok-free.dev/webhook/github
+#
+#jobs:
+#  send-pr-data:
+#    runs-on: ubuntu-latest
+#    steps:
+#      # ============================================
+#      # 1. PR 이벤트: 핵심 필드만 추출해서 전송
+#      # ============================================
+#      - name: Send PR Event (Filtered)
+#        if: github.event_name == 'pull_request'
+#        run: |
+#          FILTERED=$(cat << 'EOF' | jq -c '.'
+#          {
+#            "event_type": "pull_request",
+#            "action": "${{ github.event.action }}",
+#            "pr_number": ${{ github.event.pull_request.number }},
+#            "title": ${{ toJSON(github.event.pull_request.title) }},
+#            "state": "${{ github.event.pull_request.state }}",
+#            "draft": ${{ github.event.pull_request.draft }},
+#            "merged": ${{ github.event.pull_request.merged || false }},
+#            "created_at": "${{ github.event.pull_request.created_at }}",
+#            "updated_at": "${{ github.event.pull_request.updated_at }}",
+#            "closed_at": ${{ toJSON(github.event.pull_request.closed_at) }},
+#            "merged_at": ${{ toJSON(github.event.pull_request.merged_at) }},
+#            "changed_files": ${{ github.event.pull_request.changed_files || 0 }},
+#            "additions": ${{ github.event.pull_request.additions || 0 }},
+#            "deletions": ${{ github.event.pull_request.deletions || 0 }},
+#            "commits": ${{ github.event.pull_request.commits || 0 }},
+#            "review_comments": ${{ github.event.pull_request.review_comments || 0 }},
+#            "comments": ${{ github.event.pull_request.comments || 0 }},
+#            "author": "${{ github.event.pull_request.user.login }}",
+#            "merged_by": ${{ toJSON(github.event.pull_request.merged_by.login) }},
+#            "html_url": "${{ github.event.pull_request.html_url }}",
+#            "requested_reviewers": ${{ toJSON(github.event.pull_request.requested_reviewers.*.login) }}
+#          }
+#          EOF
+#          )
+#
+#          echo "=== PR Event (Filtered) ==="
+#          echo "$FILTERED" | jq '.'
+#
+#          curl -X POST \
+#            -H "Content-Type: application/json" \
+#            -H "X-GitHub-Event: pull_request" \
+#            -H "X-GitHub-Action: ${{ github.event.action }}" \
+#            -H "X-PR-Number: ${{ github.event.pull_request.number }}" \
+#            -d "$FILTERED" \
+#            $WEBHOOK_URL
+#
+#      # ============================================
+#      # 2. Review 이벤트: 리뷰 결과만 추출
+#      # ============================================
+#      - name: Send Review Event (Filtered)
+#        if: github.event_name == 'pull_request_review'
+#        run: |
+#          FILTERED=$(cat << 'EOF' | jq -c '.'
+#          {
+#            "event_type": "pull_request_review",
+#            "action": "${{ github.event.action }}",
+#            "pr_number": ${{ github.event.pull_request.number }},
+#            "review_id": ${{ github.event.review.id }},
+#            "reviewer": "${{ github.event.review.user.login }}",
+#            "review_state": "${{ github.event.review.state }}",
+#            "submitted_at": "${{ github.event.review.submitted_at }}",
+#            "pr_author": "${{ github.event.pull_request.user.login }}",
+#            "pr_title": ${{ toJSON(github.event.pull_request.title) }}
+#          }
+#          EOF
+#          )
+#
+#          echo "=== Review Event (Filtered) ==="
+#          echo "$FILTERED" | jq '.'
+#
+#          curl -X POST \
+#            -H "Content-Type: application/json" \
+#            -H "X-GitHub-Event: pull_request_review" \
+#            -H "X-GitHub-Action: ${{ github.event.action }}" \
+#            -H "X-PR-Number: ${{ github.event.pull_request.number }}" \
+#            -d "$FILTERED" \
+#            $WEBHOOK_URL
+#
+#      # ============================================
+#      # 3. Merge 시: 전체 데이터 일괄 수집
+#      # ============================================
+#      - name: Fetch All Data on Merge
+#        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+#        run: |
+#          echo "=== Fetching all PR data on merge ==="
+#
+#          # 3-1. Commits 데이터
+#          echo "Fetching commits..."
+#          COMMITS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+#            "${{ github.event.pull_request.commits_url }}" | jq '[.[] | {
+#              sha: .sha,
+#              message: .commit.message,
+#              author: .commit.author.name,
+#              author_login: .author.login,
+#              created_at: .commit.author.date
+#            }]')
+#
+#          # 3-2. Review Comments (코드 리뷰 코멘트)
+#          echo "Fetching review comments..."
+#          REVIEW_COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+#            "${{ github.event.pull_request.review_comments_url }}" | jq '[.[] | {
+#              id: .id,
+#              review_id: .pull_request_review_id,
+#              author: .user.login,
+#              body: .body,
+#              path: .path,
+#              created_at: .created_at,
+#              in_reply_to_id: .in_reply_to_id
+#            }]')
+#
+#          # 3-3. 일반 Comments (대화 탭)
+#          echo "Fetching issue comments..."
+#          ISSUE_COMMENTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+#            "${{ github.event.pull_request.comments_url }}" | jq '[.[] | {
+#              id: .id,
+#              author: .user.login,
+#              body: .body,
+#              created_at: .created_at
+#            }]')
+#
+#          # 3-4. Reviews 목록 (approve/changes_requested 이력)
+#          echo "Fetching reviews..."
+#          REVIEWS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+#            "${{ github.event.pull_request.url }}/reviews" | jq '[.[] | {
+#              id: .id,
+#              reviewer: .user.login,
+#              state: .state,
+#              submitted_at: .submitted_at
+#            }]')
+#
+#          # 전체 데이터 조합
+#          MERGE_DATA=$(jq -n \
+#            --argjson commits "$COMMITS" \
+#            --argjson review_comments "$REVIEW_COMMENTS" \
+#            --argjson issue_comments "$ISSUE_COMMENTS" \
+#            --argjson reviews "$REVIEWS" \
+#            '{
+#              event_type: "pull_request_merged",
+#              pr_number: ${{ github.event.pull_request.number }},
+#              title: ${{ toJSON(github.event.pull_request.title) }},
+#              author: "${{ github.event.pull_request.user.login }}",
+#              merged_by: "${{ github.event.pull_request.merged_by.login }}",
+#              created_at: "${{ github.event.pull_request.created_at }}",
+#              merged_at: "${{ github.event.pull_request.merged_at }}",
+#              changed_files: ${{ github.event.pull_request.changed_files }},
+#              additions: ${{ github.event.pull_request.additions }},
+#              deletions: ${{ github.event.pull_request.deletions }},
+#              commits: $commits,
+#              reviews: $reviews,
+#              review_comments: $review_comments,
+#              issue_comments: $issue_comments
+#            }')
+#
+#          echo "=== Merge Data ==="
+#          echo "$MERGE_DATA" | jq '.'
+#
+#          curl -X POST \
+#            -H "Content-Type: application/json" \
+#            -H "X-GitHub-Event: pull_request_merged" \
+#            -H "X-PR-Number: ${{ github.event.pull_request.number }}" \
+#            -d "$MERGE_DATA" \
+#            $WEBHOOK_URL
