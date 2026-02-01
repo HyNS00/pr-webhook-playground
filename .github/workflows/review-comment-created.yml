@@ -3,7 +3,7 @@ on:
   pull_request_review_comment:
     types: [created]
 
-  jobs:
+jobs:
     log:
       runs-on: ubuntu-latest
       steps:
