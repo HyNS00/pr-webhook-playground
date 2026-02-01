@@ -12,6 +12,7 @@ jobs:
           echo "Run ID: ${{ github.run_id }}"
           echo ""
           echo "--- PR Info ---"
+          echo "PR ID (GitHub 전역): ${{ github.event.pull_request.id }}"
           echo "PR Number: #${{ github.event.pull_request.number }}"
           echo "PR Title: ${{ github.event.pull_request.title }}"
           echo "PR Author: ${{ github.event.pull_request.user.login }}"
