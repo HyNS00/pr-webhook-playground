@@ -1,0 +1,22 @@
+name: PR-ism All-in-One
+
+on:
+  pull_request:
+    types: [opened, review_requested, review_request_removed, labeled, unlabeled]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  prism:
+    uses: pr-ism/github-actions/.github/workflows/prism.reusable.yml@v1
+    with:
+      stats_webhook_url: "https://stats.pr-ism.site"
+      slack_webhook_url: "https://slack.pr-ism.site"
+    secrets:
+      PRISM_API_KEY: ${{ secrets.PRISM_API_KEY }}
