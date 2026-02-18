@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>무한 칭찬 폭죽 생성기 🎉</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: 'Do Hyeon', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            transition: background-color 0.3s ease;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        #container {
+            text-align: center;
+            z-index: 10;
+            pointer-events: none; /* 클릭이 바디로 통과되도록 */
+        }
+
+        h1 {
+            font-family: 'Black Han Sans', sans-serif;
+            font-size: 5rem;
+            text-shadow: 4px 4px 0px #000;
+            margin: 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        p {
+            font-size: 1.5rem;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+
+        .message {
+            position: absolute;
+            font-size: 3rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none;
+            white-space: nowrap;
+            animation: popUp 1.5s forwards;
+        }
+
+        #click-hint {
+            margin-top: 50px;
+            padding: 15px 30px;
+            border: 2px solid white;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            animation: pulse 2s infinite;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+
+        @keyframes popUp {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
+            20% { transform: translate(-50%, -150%) scale(1.2) rotate(5deg); opacity: 1; }
+            80% { transform: translate(-50%, -200%) scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: translate(-50%, -250%) scale(0.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="container">
+    <h1 id="main-title">오늘도 최고야!</h1>
+    <div id="click-hint">화면 아무 곳이나 클릭해보세요! (소리 켜기 🔊)</div>
+</div>
+
+<script>
+    // 칭찬 멘트 리스트
+    const phrases = [
+        "천재 개발자! 💻", "버그가 도망갑니다! 🐛", "오늘도 해냈어!",
+        "코드가 빛나고 있어 ✨", "빌드 성공! 🚀", "완벽한 로직이야",
+        "넌 전설이다 🏆", "커피 한 잔의 여유 ☕", "알고리즘의 신",
+        "배포 완료! ✅", "LGTM! 👍", "오류 없는 삶",
+        "연봉 상승각 💰", "칼퇴 요정 🧚", "집중력 최고 🔥"
+    ];
+
+    const colors = ['#ff4757', '#2ed573', '#1e90ff', '#ffa502', '#ff6b81', '#7bed9f', '#70a1ff', '#eccc68'];
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const body = document.body;
+    const title = document.getElementById('main-title');
+
+    let particles = [];
+    let width, height;
+
+    // 캔버스 크기 조절
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // 오디오 컨텍스트 설정 (클릭 시 효과음)
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+
+    function playSound() {
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'triangle';
+        // 랜덤한 높은 음 (C5 ~ C6)
+        const freq = 523.25 + Math.random() * 523.25;
+        oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+        // 소리 크기 조절 (점점 작아지게)
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.5);
+    }
+
+    // 파티클 클래스
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 6 + 2;
+            this.vx = Math.cos(angle) * velocity;
+            this.vy = Math.sin(angle) * velocity;
+            this.gravity = 0.15;
+            this.friction = 0.98;
+            this.alpha = 1;
+            this.size = Math.random() * 8 + 4;
+        }
+
+        update() {
+            this.vx *= this.friction;
+            this.vy *= this.friction;
+            this.vy += this.gravity;
+            this.x += this.vx;
+            this.y += this.vy;
+            this.alpha -= 0.015;
+        }
+
+        draw() {
+            ctx.save();
+            ctx.globalAlpha = this.alpha;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    function createExplosion(x, y) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        for (let i = 0; i < 40; i++) {
+            particles.push(new Particle(x, y, color));
+        }
+    }
+
+    function showMessage(x, y) {
+        const msg = document.createElement('div');
+        msg.className = 'message';
+        msg.innerText = phrases[Math.floor(Math.random() * phrases.length)];
+        msg.style.left = x + 'px';
+        msg.style.top = y + 'px';
+        msg.style.color = colors[Math.floor(Math.random() * colors.length)];
+
+        // 텍스트 회전 랜덤
+        const rotation = (Math.random() - 0.5) * 30;
+        msg.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+
+        document.body.appendChild(msg);
+
+        // 애니메이션 후 삭제
+        setTimeout(() => {
+            msg.remove();
+        }, 1500);
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+
+        particles.forEach((p, index) => {
+            p.update();
+            p.draw();
+            if (p.alpha <= 0) {
+                particles.splice(index, 1);
+            }
+        });
+
+        requestAnimationFrame(animate);
+    }
+
+    // 메인 클릭 이벤트
+    document.body.addEventListener('click', (e) => {
+        const x = e.clientX;
+        const y = e.clientY;
+
+        createExplosion(x, y);
+        showMessage(x, y);
+        playSound();
+
+        // 배경색 살짝 변경 효과
+        body.style.backgroundColor = '#222';
+        setTimeout(() => body.style.backgroundColor = '#1a1a1a', 100);
+
+        // 타이틀 바운스
+        title.style.transform = 'scale(1.2)';
+        setTimeout(() => title.style.transform = 'scale(1)', 100);
+    });
+
+    // 모바일 터치 대응
+    document.body.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // 스크롤 방지
+        const x = e.touches[0].clientX;
+        const y = e.touches[0].clientY;
+
+        // 클릭과 동일한 로직
+        createExplosion(x, y);
+        showMessage(x, y);
+        playSound();
+    }, { passive: false });
+
+    animate();
+
+</script>
+</body>
+</html>
