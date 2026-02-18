@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>☕ 418 I'm a teapot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fdf6e3;
+            --card-color: #ffffff;
+            --accent-color: #d35400;
+            --text-color: #2c3e50;
+            --font-title: 'Fredoka One', cursive;
+            --font-body: 'Gaegu', cursive;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-color);
+            background-image: radial-gradient(#e9e0c9 1px, transparent 1px);
+            background-size: 20px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .card-container {
+            background-color: var(--card-color);
+            padding: 40px;
+            border-radius: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            border: 3px solid var(--accent-color);
+            transform: rotate(-2deg);
+            transition: transform 0.3s ease;
+        }
+
+        .card-container:hover {
+            transform: rotate(0deg) scale(1.02);
+        }
+
+        h1 {
+            font-family: var(--font-title);
+            font-size: 48px;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0px #f1c40f;
+        }
+
+        .subtitle {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        .emoji-art {
+            font-size: 80px;
+            margin: 20px 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .quote {
+            font-size: 20px;
+            font-style: italic;
+            background: #eee;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .fun-button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 22px;
+            font-family: var(--font-body);
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #a04000;
+            transition: all 0.1s;
+        }
+
+        .fun-button:active {
+            box-shadow: 0 2px 0 #a04000;
+            transform: translateY(3px);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card-container">
+    <div class="emoji-art">☕️💻🐛</div>
+    <h1>코딩 휴게소</h1>
+    <p class="subtitle">잠시 뇌를 식히는 중입니다...</p>
+
+    <div class="quote">
+        "내 코드가 왜 돌아가는지 모르겠지만,<br>
+        일단 건드리지 말자."
+        <br>- 어느 익명의 개발자 -
+    </div>
+
+    <button class="fun-button" onclick="deployMagic()">✨ 매직 배포 버튼 ✨</button>
+
+    <p style="margin-top: 20px; font-size: 16px;">(주의: 실제로 배포되진 않습니다)</p>
+
+    <div class="footer">
+        PR 테스트용 페이지 v0.4.18 <br>
+        Made with 🧡 & Caffeine
+    </div>
+</div>
+
+<script>
+    function deployMagic() {
+        const messages = [
+            "🚀 배포 시작! 은 훼이크고 커피나 드세요.",
+            "✨ 짠! 버그가 +1 증가했습니다.",
+            "🤔 서버가 당신의 코드를 보고 당황했습니다.",
+            "🎉 축하합니다! 아무 일도 일어나지 않았습니다.",
+            "💻 컴파일 중... 딴짓하기 좋은 타이밍이군요."
+        ];
+        const randomIndex = Math.floor(Math.random() * messages.length);
+        alert(messages[randomIndex]);
+    }
+</script>
+
+</body>
+</html>
