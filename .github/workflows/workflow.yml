@@ -2,11 +2,11 @@ name: PR-ism All-in-One
 
 on:
   pull_request:
-    types: [opened, review_requested, review_request_removed, labeled, unlabeled]
+    types: [opened, closed, synchronize, review_requested, review_request_removed, labeled, unlabeled]
   pull_request_review:
     types: [submitted]
   pull_request_review_comment:
-    types: [created, edited]
+    types: [created, edited, deleted]
 
 permissions:
   contents: read
