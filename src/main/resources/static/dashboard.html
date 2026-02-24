@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PR Webhook Digital Matrix</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        #overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            text-shadow: 0 0 5px #0f0;
+        }
+        .stat-box {
+            border: 1px solid #0f0;
+            padding: 15px;
+            background: rgba(0, 20, 0, 0.8);
+            margin-bottom: 10px;
+            min-width: 250px;
+        }
+        .log-entry {
+            font-size: 0.9em;
+            margin-top: 5px;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+    
+    <div id="overlay">
+        <div class="stat-box">
+            <h2 style="margin:0">SYSTEM: PR_MONITOR_v1.0</h2>
+            <p>STATUS: <span class="blink">SCANNING...</span></p>
+            <div id="stats">
+                <div>OPEN_PRS: 0</div>
+                <div>MERGED_TODAY: 0</div>
+                <div>AVG_REVIEW_TIME: --</div>
+            </div>
+        </div>
+        <div class="stat-box" style="max-height: 300px; overflow: hidden;">
+            <h3 style="margin:0">LATEST_EVENTS:</h3>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>/{}[]+=*&^%$#@!";
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#0f0";
+            ctx.font = fontSize + "px monospace";
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = letters[Math.floor(Math.random() * letters.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        // 시뮬레이션 데이터
+        const log = document.getElementById('log');
+        const events = [
+            "PR #102: OPENED by 'dev-ninja'",
+            "PR #101: MERGED by 'lead-architect'",
+            "PR #103: REVIEW_REQUESTED from 'senior-dev'",
+            "WEBHOOK: Received 'pull_request.synchronized'",
+            "CI: Build #442 SUCCESS",
+            "SECURITY: No vulnerabilities found"
+        ];
+
+        function addEvent() {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerText = `[${timestamp}] ${events[Math.floor(Math.random() * events.length)]}`;
+            log.prepend(entry);
+            if (log.children.length > 8) log.lastChild.remove();
+        }
+
+        setInterval(drawMatrix, 33);
+        setInterval(addEvent, 2000);
+
+        window.onresize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+    </script>
+</body>
+</html>
