@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report List</title>
+    <link rel="stylesheet" href="/css/reports.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Reporting Dashboard</h1>
+        
+        <div id="summary" style="display: flex; gap: 20px; margin-bottom: 30px;">
+            <!-- Summary cards will be here -->
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <button class="btn btn-primary" onclick="location.href='/reports/create.html'">Create New Report</button>
+        </div>
+
+        <div class="report-list" id="report-list">
+            <!-- Reports will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        async function loadReports() {
+            const response = await fetch('/api/reports');
+            const reports = await response.json();
+            const list = document.getElementById('report-list');
+            list.innerHTML = reports.map(r => `
+                <div class="report-item">
+                    <div>
+                        <strong>${r.title}</strong><br>
+                        <small>${r.type} | ${new Date(r.createdAt).toLocaleString()}</small>
+                    </div>
+                    <span class="status-badge status-${r.status.toLowerCase()}">${r.status}</span>
+                </div>
+            `).join('');
+        }
+
+        async function loadSummary() {
+            const response = await fetch('/api/reports/summary');
+            const s = await response.json();
+            document.getElementById('summary').innerHTML = `
+                <div style="background: #e9ecef; padding: 15px; border-radius: 8px; flex: 1;">
+                    Total: <strong>${s.totalReports}</strong>
+                </div>
+                <div style="background: #d4edda; padding: 15px; border-radius: 8px; flex: 1;">
+                    Completed: <strong>${s.completedReports}</strong>
+                </div>
+                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; flex: 1;">
+                    Pending: <strong>${s.pendingReports}</strong>
+                </div>
+            `;
+        }
+
+        loadReports();
+        loadSummary();
+    </script>
+</body>
+</html>
