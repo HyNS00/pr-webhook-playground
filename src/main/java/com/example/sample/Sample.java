@@ -6,7 +6,7 @@ public class Sample {
 
     public Sample(String sample) {
         this.sample = sample;
-        this.sample2 = "ddd";
+        this.sample2 = "dddddddd";
     }
 
     public String getSample() {
