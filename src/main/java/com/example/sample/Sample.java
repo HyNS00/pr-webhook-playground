@@ -5,7 +5,7 @@ public class Sample {
     private String sample2;
 
     public Sample(String sample) {
-        this.sample = sample;
+        this.sample = sample + "e";
         this.sample2 = "ddd";
     }
 
