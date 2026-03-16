@@ -16,7 +16,7 @@ jobs:
   prism:
     uses: pr-ism/github-actions/.github/workflows/prism.reusable.yml@v1
     with:
-      stats_webhook_url: "https://54.180.95.178:8080"
+      stats_webhook_url: "http://54.180.95.178:8080"
       slack_webhook_url: "https://slack.pr-ism.site"
     secrets:
       PRISM_API_KEY: ${{ secrets.PRISM_API_KEY }}
