@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report Detail</title>
+    <link rel="stylesheet" href="/css/reports.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Report Details</h1>
+        <div id="detail">
+            <!-- Detail content will be loaded here -->
+        </div>
+        <div style="margin-top: 20px;">
+            <button class="btn" onclick="location.href='/reports/report-list.html'">Back to List</button>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const reportId = urlParams.get('id');
+
+        async function loadDetail() {
+            if (!reportId) return;
+            const response = await fetch('/api/reports/' + reportId);
+            const r = await response.json();
+            document.getElementById('detail').innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h3>${r.title}</h3>
+                    <p>Type: ${r.type}</p>
+                    <p>Status: <span class="status-badge status-${r.status.toLowerCase()}">${r.status}</span></p>
+                    <p>Created At: ${new Date(r.createdAt).toLocaleString()}</p>
+                    ${r.completedAt ? `<p>Completed At: ${new Date(r.completedAt).toLocaleString()}</p>` : ''}
+                </div>
+                <div style="background: #f1f3f5; padding: 20px; border-radius: 4px;">
+                    <h4>Analysis Results</h4>
+                    <pre id="content">${r.content || 'Processing...'}</pre>
+                </div>
+            `;
+        }
+
+        loadDetail();
+    </script>
+</body>
+</html>

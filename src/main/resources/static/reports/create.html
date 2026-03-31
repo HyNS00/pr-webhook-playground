@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Report</title>
+    <link rel="stylesheet" href="/css/reports.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Create New Report</h1>
+        <form id="reportForm">
+            <div style="margin-bottom: 15px;">
+                <label>Title</label><br>
+                <input type="text" id="title" style="width: 100%; padding: 8px;" required>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label>Type</label><br>
+                <select id="type" style="width: 100%; padding: 8px;">
+                    <option value="PULL_REQUEST_STATS">Pull Request Stats</option>
+                    <option value="REVIEWER_ACTIVITY">Reviewer Activity</option>
+                    <option value="MERGE_LATENCY">Merge Latency</option>
+                    <option value="TEAM_PERFORMANCE">Team Performance</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Generate Report</button>
+            <button type="button" class="btn" onclick="location.href='/reports/report-list.html'">Cancel</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('reportForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                title: document.getElementById('title').value,
+                type: document.getElementById('type').value
+            };
+            const response = await fetch('/api/reports', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                location.href = '/reports/report-list.html';
+            }
+        };
+    </script>
+</body>
+</html>
